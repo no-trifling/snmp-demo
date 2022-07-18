@@ -1,25 +1,18 @@
 package com.wangxc.snmpdemo;
 
-import org.snmp4j.PDU;
-import org.snmp4j.Snmp;
-import org.snmp4j.TransportMapping;
-import org.snmp4j.UserTarget;
+import org.snmp4j.*;
 import org.snmp4j.event.ResponseEvent;
-import org.snmp4j.event.ResponseListener;
 import org.snmp4j.mp.MPv3;
 import org.snmp4j.mp.SnmpConstants;
 import org.snmp4j.security.*;
-import org.snmp4j.smi.Address;
-import org.snmp4j.smi.GenericAddress;
-import org.snmp4j.smi.OID;
-import org.snmp4j.smi.OctetString;
+import org.snmp4j.smi.*;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import java.io.IOException;
 
 /**
  * @ClassName SnmpTest
- * @Description TODO
+ * @Description 发送SNMPNEXT请求
  * @Author wangxc
  * @date 2022/7/13 17:19
  * @Version 1.0
@@ -27,28 +20,18 @@ import java.io.IOException;
 public class SnmpTest {
 
     public static void main(String[] args) throws IOException {
-        Snmp snmp = new Snmp();
 
-        Address targetAddress = GenericAddress.parse("udp:127.0.0.1/161");
-        TransportMapping transport = new DefaultUdpTransportMapping();
-        snmp = new Snmp(transport);
-        USM usm = new USM(SecurityProtocols.getInstance(),
-                new OctetString(MPv3.createLocalEngineID()), 0);
-        SecurityModels.getInstance().addSecurityModel(usm);
-        transport.listen();
+        byte[] addr = {39, 105, (byte) 213, 2};
+        int address  = addr[3] & 0xFF;
+        address |= ((addr[2] << 8) & 0xFF00);
+        address |= ((addr[1] << 16) & 0xFF0000);
+        address |= ((addr[0] << 24) & 0xFF000000);
+        System.out.println(address);
+        System.out.println(Integer.toBinaryString(39) + "." + Integer.toBinaryString(105) + "." + Integer.toBinaryString(213) + "." + Integer.toBinaryString(2));
+        System.out.println(Integer.toBinaryString(address));
 
-        // add user to the USM
-        snmp.getUSM().addUser(new OctetString("testv3"), new UsmUser(new OctetString("tesv3"), AuthMD5.ID, new OctetString("mypassword"), PrivDES.ID, new OctetString("mypassword")));
-
-        // create the target
-        UserTarget target = new UserTarget();
-        target.setAddress(targetAddress);
-        target.setRetries(1);
-        target.setTimeout(5000);
-        target.setVersion(SnmpConstants.version3);
-        target.setSecurityLevel(SecurityLevel.AUTH_PRIV);
-        target.setSecurityName(new OctetString("testv3"));
-
-        // create the PDU
     }
+
+
+
 }
