@@ -110,10 +110,11 @@ public class SnmpGet {
             userTarget.setSecurityName(new OctetString("testv3"));
 
             ScopedPDU scopedPDU = new ScopedPDU();
-            scopedPDU.add(new VariableBinding(new OID(".1.3.6.1.2.1.1.1.0")));
             scopedPDU.setType(PDU.GET);
+            scopedPDU.add(new VariableBinding(new OID(".1.3.6.1.2.1.1.1.0")));
 
             ResponseEvent responseEvent = snmp.send(scopedPDU, userTarget);
+            snmp.close();
             System.out.println(responseEvent.getRequest());
             System.out.println(responseEvent.getResponse());
 

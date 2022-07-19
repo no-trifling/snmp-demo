@@ -9,6 +9,7 @@ import org.snmp4j.smi.*;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * @ClassName SnmpTest
@@ -21,14 +22,9 @@ public class SnmpTest {
 
     public static void main(String[] args) throws IOException {
 
-        byte[] addr = {39, 105, (byte) 213, 2};
-        int address  = addr[3] & 0xFF;
-        address |= ((addr[2] << 8) & 0xFF00);
-        address |= ((addr[1] << 16) & 0xFF0000);
-        address |= ((addr[0] << 24) & 0xFF000000);
-        System.out.println(address);
-        System.out.println(Integer.toBinaryString(39) + "." + Integer.toBinaryString(105) + "." + Integer.toBinaryString(213) + "." + Integer.toBinaryString(2));
-        System.out.println(Integer.toBinaryString(address));
+        byte[] localEngineID = MPv3.createLocalEngineID();
+        System.out.println(localEngineID.length);
+        System.out.println(Arrays.toString(localEngineID));
 
     }
 
