@@ -92,7 +92,6 @@ public class SnmpGet {
             Snmp snmp = new Snmp(transportMapping);
             USM usm = new USM(SecurityProtocols.getInstance(), new OctetString(MPv3.createLocalEngineID()), 0);
             SecurityModels.getInstance().addSecurityModel(usm);
-            transportMapping.listen();
 
             snmp.getUSM().addUser(new OctetString("testv3"),
                     new UsmUser(new OctetString("testv3"),
@@ -113,6 +112,7 @@ public class SnmpGet {
             scopedPDU.setType(PDU.GET);
             scopedPDU.add(new VariableBinding(new OID(".1.3.6.1.2.1.1.1.0")));
 
+            snmp.listen();
             ResponseEvent responseEvent = snmp.send(scopedPDU, userTarget);
             snmp.close();
             System.out.println(responseEvent.getRequest());

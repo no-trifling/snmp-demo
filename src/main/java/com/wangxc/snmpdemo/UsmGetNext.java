@@ -126,7 +126,7 @@ public class UsmGetNext {
     }
 
     /**
-     * udp:39.105.213.2/161 testv3 mypassword mypassword .1.3.6.1.2.1.1.5.0
+     * udp:39.105.213.2/161 testv3 mypassword mypassword .1.3.6.1.2.1.1.4.0
      * @param args
      */
     public static void main(String[] args) {

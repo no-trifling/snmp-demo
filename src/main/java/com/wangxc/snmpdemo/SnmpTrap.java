@@ -2,6 +2,9 @@ package com.wangxc.snmpdemo;
 
 import org.snmp4j.*;
 import org.snmp4j.event.ResponseEvent;
+import org.snmp4j.log.ConsoleLogFactory;
+import org.snmp4j.log.LogFactory;
+import org.snmp4j.log.LogLevel;
 import org.snmp4j.mp.MPv3;
 import org.snmp4j.mp.SnmpConstants;
 import org.snmp4j.security.*;
@@ -18,10 +21,33 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 public class SnmpTrap {
 
     public static void main(String[] args) {
+
+//
 //        v1();
 //        v2c();
-        v3();
+//        v3();
+
+
+        UdpAddress udpAddress = new UdpAddress("127.0.0.1/162");
+        String username = "nmsAdmin3ap";
+        String authenticationPassphrase = "nmsAuthKey";
+        String privacyPassphrase = "nmsPrivKey";
+        byte[] engineId = OctetString.fromHexString("80:00:00:00:01:02:03:04").toByteArray();
+        engineId = "JL-CC-SNL".getBytes();
+        String s = new OctetString(engineId).toHexString();
+        System.out.println("hex sfdsf: " + s);
+
+        v3(udpAddress, username, AuthMD5.ID, authenticationPassphrase, Priv3DES.ID, privacyPassphrase, engineId);
+
+
     }
+
+    static {
+        ConsoleLogFactory consoleLogFactory = new ConsoleLogFactory();
+        consoleLogFactory.getRootLogger().setLogLevel(LogLevel.DEBUG);
+        LogFactory.setLogFactory(consoleLogFactory);
+    }
+
 
     /**
      * 发送 SNMP TRAP v1
@@ -108,25 +134,27 @@ public class SnmpTrap {
     public static void v3() {
         try {
 
+            byte[] engineId = {-128, 0, 0, 0, 1, 2, 3, 4};
+
             DefaultUdpTransportMapping transportMapping = new DefaultUdpTransportMapping();
             Snmp snmp = new Snmp(transportMapping);
-            USM usm = new USM(SecurityProtocols.getInstance(), OctetString.fromHexString("80:00:00:00:01:02:03:04"), 0);
+//            USM usm = new USM(SecurityProtocols.getInstance(), new OctetString(MPv3.createLocalEngineID()), 0);
+            USM usm = new USM();
             SecurityModels.getInstance().addSecurityModel(usm);
-            transportMapping.listen();
 
             snmp.getUSM().addUser(new OctetString("traptest"),
-                    new UsmUser(new OctetString("traptest"),
-                            AuthSHA.ID,
-                            new OctetString("mypassword"),
-                            PrivAES128.ID,
-                            new OctetString("mypassword")));
+                        OctetString.fromHexString("80:00:00:00:01:02:03:04"),
+                        new UsmUser(new OctetString("traptest"),
+                                AuthSHA.ID,
+                                new OctetString("mypassword"),
+                                PrivAES128.ID,
+                                new OctetString("mypassword")));
+            snmp.setLocalEngine(OctetString.fromHexString("80:00:00:00:01:02:03:04").getValue(), 0, 0);
 
             UserTarget userTarget = new UserTarget();
             userTarget.setAddress(new UdpAddress("39.105.213.2/162"));
             userTarget.setVersion(SnmpConstants.version3);
-            userTarget.setRetries(1);
-            userTarget.setTimeout(5000);
-            userTarget.setSecurityLevel(SecurityLevel.AUTH_PRIV);
+            userTarget.setSecurityLevel(SecurityLevel.AUTH_NOPRIV);
             userTarget.setSecurityName(new OctetString("traptest"));
 
             ScopedPDU scopedPDU = new ScopedPDU();
@@ -134,14 +162,45 @@ public class SnmpTrap {
             scopedPDU.add(new VariableBinding(SnmpConstants.sysUpTime, new TimeTicks(0)));
             scopedPDU.add(new VariableBinding(SnmpConstants.snmpTrapOID, SnmpConstants.linkUp));
 
-            ResponseEvent responseEvent = snmp.send(scopedPDU, userTarget);
+            snmp.send(scopedPDU, userTarget);
             snmp.close();
-            System.out.println(responseEvent.getRequest());
-            System.out.println(responseEvent.getResponse());
-
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static void v3(UdpAddress udpAddress, String username, OID authenticationProtocol, String authenticationPassphrase, OID privacyProtocol, String privacyPassphrase, byte[] engineID) {
+
+        try {
+            Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
+
+            USM usm = new USM();
+            SecurityModels.getInstance().addSecurityModel(usm);
+            snmp.getUSM().addUser(new OctetString(username), new OctetString(engineID),
+                    new UsmUser(new OctetString(username), authenticationProtocol, new OctetString(authenticationPassphrase), privacyProtocol, new OctetString(privacyPassphrase)));
+            snmp.setLocalEngine(engineID, 0, 0);
+
+            UserTarget userTarget = new UserTarget();
+            userTarget.setAddress(udpAddress);
+            userTarget.setVersion(SnmpConstants.version3);
+            userTarget.setSecurityLevel(SecurityLevel.AUTH_PRIV);
+            userTarget.setSecurityName(new OctetString(username));
+
+            ScopedPDU scopedPDU = new ScopedPDU();
+            scopedPDU.setType(PDU.TRAP);
+            scopedPDU.add(new VariableBinding(SnmpConstants.sysUpTime, new TimeTicks(0)));
+            scopedPDU.add(new VariableBinding(SnmpConstants.snmpTrapOID, SnmpConstants.linkUp));
+
+            snmp.send(scopedPDU, userTarget);
+            snmp.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+
+
     }
 }
