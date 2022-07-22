@@ -11,6 +11,9 @@ import org.snmp4j.security.*;
 import org.snmp4j.smi.*;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @ClassName SnmpTrap
  * @Description 发送 SNMP TRAP 请求
@@ -28,17 +31,44 @@ public class SnmpTrap {
 //        v3();
 
 
-        UdpAddress udpAddress = new UdpAddress("127.0.0.1/162");
-        String username = "nmsAdmin3ap";
-        String authenticationPassphrase = "nmsAuthKey";
-        String privacyPassphrase = "nmsPrivKey";
+        /**
+         * 发送 SNMP v1 TRAP
+         */
+//        (String community, UdpAddress udpAddress, OID enterpriseOid, IpAddress agentAddress, int genericTrap, int specificTrap, long timeStamp, List<VariableBinding> variableBindings) {
+        String community = "public";
+//        UdpAddress udpAddress = new UdpAddress("127.0.0.1/162");
+        UdpAddress udpAddress = new UdpAddress("39.105.213.2/162");
+        OID enterpriseOid = new OID("1.3.6.1.4.1.8072.2.3.0.1");
+        IpAddress ipAddress = new IpAddress("10.10.10.10");
+        List<VariableBinding> variableBindings = new ArrayList<>();
+//        variableBindings.add(new VariableBinding(new OID("1.3.6.1.4.1.8072.2.3.2.1.0"), new Integer32(111111)));
+        v1(community, udpAddress, enterpriseOid, ipAddress, PDUv1.LINKDOWN, 0, 0L, variableBindings);
+
+        /**
+         * 发送 SNMP v2c TRAP
+         */
+//        public static void v2c(String community, UdpAddress udpAddress, List<VariableBinding> variableBindings) {
+        List<VariableBinding> variableBindings2 = new ArrayList<>();
+        variableBindings2.add(new VariableBinding(SnmpConstants.sysUpTime, new TimeTicks(2000)));
+        variableBindings2.add(new VariableBinding(SnmpConstants.snmpTrapOID, new OID("1.3.6.1.4.1.8072.2.3.0.1")));
+        variableBindings2.add(new VariableBinding(new OID("1.3.6.1.4.1.8072.2.3.2.1.0"), new Integer32(666666)));
+//        v2c(community, udpAddress, variableBindings2);
+//        informV2c(community, udpAddress, variableBindings2);
+
+
+
+        /**
+         * 发送 SNMP v3 TRAP
+         */
+        String username = "wangxc";
+        String authenticationPassphrase = "mypassword";
+        String privacyPassphrase = "mypassword";
         byte[] engineId = OctetString.fromHexString("80:00:00:00:01:02:03:04").toByteArray();
         engineId = "JL-CC-SNL".getBytes();
+        engineId = "testsssssss".getBytes();
         String s = new OctetString(engineId).toHexString();
-        System.out.println("hex sfdsf: " + s);
 
-        v3(udpAddress, username, AuthMD5.ID, authenticationPassphrase, Priv3DES.ID, privacyPassphrase, engineId);
-
+//        v3(udpAddress, username, AuthMD5.ID, authenticationPassphrase, PrivDES.ID, privacyPassphrase, engineId, new ArrayList<>());
 
     }
 
@@ -51,10 +81,10 @@ public class SnmpTrap {
 
     /**
      * 发送 SNMP TRAP v1
-     *
-     *   -v 1 TRAP-PARAMETERS:
-     *          enterprise-oid agent trap-type specific-type uptime [OID TYPE VALUE]...
-     *
+     * <p>
+     * -v 1 TRAP-PARAMETERS:
+     * enterprise-oid agent trap-type specific-type uptime [OID TYPE VALUE]...
+     * <p>
      * snmptrap -v 1 -c public 39.105.213.2  1.3.6.1.4.1.8072.2.3.0.1   10.128.255.65  0  0  1000  1.3.6.1.4.1.8072.2.3.2.1.0 i 666666
      */
     public static void v1() {
@@ -82,8 +112,36 @@ public class SnmpTrap {
             ResponseEvent responseEvent = snmp.send(pdUv1, target);
             // TODO TRAP 无相应?
 //            System.out.println(responseEvent.getResponse());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
+    public static void v1(String community, UdpAddress udpAddress, OID enterpriseOid, IpAddress agentAddress, int genericTrap, int specificTrap, long timeStamp, List<VariableBinding> variableBindings) {
+        try {
 
+            DefaultUdpTransportMapping transportMapping = new DefaultUdpTransportMapping();
+            Snmp snmp = new Snmp(transportMapping);
+            transportMapping.listen();
+
+            CommunityTarget target = new CommunityTarget();
+            target.setCommunity(new OctetString(community));
+            target.setRetries(1);
+            target.setTimeout(5000);
+            target.setAddress(udpAddress);
+
+            PDUv1 pdUv1 = new PDUv1();
+            pdUv1.setType(PDUv1.V1TRAP);
+            pdUv1.setEnterprise(enterpriseOid);
+            pdUv1.setAgentAddress(agentAddress);
+            pdUv1.setGenericTrap(genericTrap);
+            pdUv1.setSpecificTrap(specificTrap);
+            pdUv1.setTimestamp(timeStamp);
+            pdUv1.addAll(variableBindings);
+
+            ResponseEvent responseEvent = snmp.send(pdUv1, target);
+            // TODO TRAP 无相应?
+//            System.out.println(responseEvent.getResponse());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -92,10 +150,10 @@ public class SnmpTrap {
 
     /**
      * 发送 SNMP TRAP v2c
-     *
-     *   -v 2 TRAP-PARAMETERS:
-     *          uptime trapoid [OID TYPE VALUE] ...
-     *
+     * <p>
+     * -v 2 TRAP-PARAMETERS:
+     * uptime trapoid [OID TYPE VALUE] ...
+     * <p>
      * snmptrap -v 2c -c public 39.105.213.2 2000 1.3.6.1.4.1.8072.2.3.0.1  1.3.6.1.4.1.8072.2.3.2.1.0 i 666666
      */
     public static void v2c() {
@@ -114,7 +172,7 @@ public class SnmpTrap {
 
             PDU pdu = new PDU();
             pdu.setType(PDU.TRAP);
-            pdu .add(new VariableBinding(SnmpConstants.sysUpTime, new TimeTicks(2000)));
+            pdu.add(new VariableBinding(SnmpConstants.sysUpTime, new TimeTicks(2000)));
             pdu.add(new VariableBinding(SnmpConstants.snmpTrapOID, new OID("1.3.6.1.4.1.8072.2.3.0.1")));
             pdu.add(new VariableBinding(new OID("1.3.6.1.4.1.8072.2.3.2.1.0"), new Integer32(666666)));
 
@@ -125,10 +183,58 @@ public class SnmpTrap {
         }
     }
 
+    public static void v2c(String community, UdpAddress udpAddress, List<VariableBinding> variableBindings) {
+        try {
+
+            DefaultUdpTransportMapping transportMapping = new DefaultUdpTransportMapping();
+            Snmp snmp = new Snmp(transportMapping);
+
+            CommunityTarget target = new CommunityTarget();
+            target.setAddress(udpAddress);
+            target.setCommunity(new OctetString(community));
+            target.setVersion(SnmpConstants.version2c);
+            target.setRetries(1);
+            target.setTimeout(5000);
+
+            PDU pdu = new PDU();
+            pdu.setType(PDU.TRAP);
+            pdu.addAll(variableBindings);
+
+            snmp.send(pdu, target);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void informV2c(String community, UdpAddress udpAddress, List<VariableBinding> variableBindings) {
+        try {
+
+            DefaultUdpTransportMapping transportMapping = new DefaultUdpTransportMapping();
+            Snmp snmp = new Snmp(transportMapping);
+
+            CommunityTarget target = new CommunityTarget();
+            target.setAddress(udpAddress);
+            target.setCommunity(new OctetString(community));
+            target.setVersion(SnmpConstants.version2c);
+            target.setRetries(1);
+            target.setTimeout(5000);
+
+            PDU pdu = new PDU();
+            pdu.setType(PDU.INFORM);
+            pdu.addAll(variableBindings);
+
+            snmp.listen();
+            ResponseEvent responseEvent = snmp.send(pdu, target);
+            System.out.println(responseEvent.getResponse());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * 发送 SNMP TRAP v3
      * v3 TRAP 除安全认证外 等同与 v2c
-     *
+     * <p>
      * snmptrap -v 3 -a SHA -A mypassword -x AES -X mypassword -l authPriv -u traptest -e 0x8000000001020304 localhost 0 linkUp.0
      */
     public static void v3() {
@@ -143,12 +249,12 @@ public class SnmpTrap {
             SecurityModels.getInstance().addSecurityModel(usm);
 
             snmp.getUSM().addUser(new OctetString("traptest"),
-                        OctetString.fromHexString("80:00:00:00:01:02:03:04"),
-                        new UsmUser(new OctetString("traptest"),
-                                AuthSHA.ID,
-                                new OctetString("mypassword"),
-                                PrivAES128.ID,
-                                new OctetString("mypassword")));
+                    OctetString.fromHexString("80:00:00:00:01:02:03:04"),
+                    new UsmUser(new OctetString("traptest"),
+                            AuthSHA.ID,
+                            new OctetString("mypassword"),
+                            PrivAES128.ID,
+                            new OctetString("mypassword")));
             snmp.setLocalEngine(OctetString.fromHexString("80:00:00:00:01:02:03:04").getValue(), 0, 0);
 
             UserTarget userTarget = new UserTarget();
@@ -170,7 +276,8 @@ public class SnmpTrap {
         }
     }
 
-    public static void v3(UdpAddress udpAddress, String username, OID authenticationProtocol, String authenticationPassphrase, OID privacyProtocol, String privacyPassphrase, byte[] engineID) {
+    public static void v3(UdpAddress udpAddress, String username, OID authenticationProtocol, String authenticationPassphrase,
+                          OID privacyProtocol, String privacyPassphrase, byte[] engineID, List<VariableBinding> variableBindings) {
 
         try {
             Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
@@ -189,8 +296,9 @@ public class SnmpTrap {
 
             ScopedPDU scopedPDU = new ScopedPDU();
             scopedPDU.setType(PDU.TRAP);
-            scopedPDU.add(new VariableBinding(SnmpConstants.sysUpTime, new TimeTicks(0)));
-            scopedPDU.add(new VariableBinding(SnmpConstants.snmpTrapOID, SnmpConstants.linkUp));
+//            scopedPDU.add(new VariableBinding(SnmpConstants.sysUpTime, new TimeTicks(0)));
+//            scopedPDU.add(new VariableBinding(SnmpConstants.snmpTrapOID, SnmpConstants.linkUp));
+            scopedPDU.addAll(variableBindings);
 
             snmp.send(scopedPDU, userTarget);
             snmp.close();
@@ -198,8 +306,6 @@ public class SnmpTrap {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-
 
 
     }

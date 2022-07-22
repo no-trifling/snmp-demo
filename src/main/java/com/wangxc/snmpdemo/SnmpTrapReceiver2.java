@@ -1,0 +1,127 @@
+package com.wangxc.snmpdemo;
+
+import java.io.IOException;
+import java.net.UnknownHostException;
+import java.util.Iterator;
+import java.util.Vector;
+
+import org.snmp4j.CommandResponder;
+import org.snmp4j.CommandResponderEvent;
+import org.snmp4j.MessageDispatcherImpl;
+import org.snmp4j.PDU;
+import org.snmp4j.PDUv1;
+import org.snmp4j.Snmp;
+import org.snmp4j.TransportMapping;
+import org.snmp4j.mp.MPv1;
+import org.snmp4j.mp.MPv2c;
+import org.snmp4j.mp.MPv3;
+import org.snmp4j.security.AuthMD5;
+import org.snmp4j.security.PrivAES128;
+import org.snmp4j.security.SecurityProtocols;
+import org.snmp4j.security.USM;
+import org.snmp4j.security.UsmUser;
+import org.snmp4j.smi.Address;
+import org.snmp4j.smi.OctetString;
+import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.smi.VariableBinding;
+import org.snmp4j.transport.DefaultUdpTransportMapping;
+import org.snmp4j.util.MultiThreadedMessageDispatcher;
+import org.snmp4j.util.ThreadPool;
+
+/**
+ * @author
+ *
+ */
+public class SnmpTrapReceiver2 implements CommandResponder {
+
+    private Snmp snmp = null;
+
+    public static void main(String[] args) {
+        new SnmpTrapReceiver2().run();
+    }
+
+    private void run() {
+        try {
+            init();
+            snmp.addCommandResponder(this);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void init() throws IOException {
+
+        TransportMapping transport = new DefaultUdpTransportMapping(new UdpAddress("127.0.0.1/162"));
+
+
+        //V3 SECURITY
+        USM usm = new USM(SecurityProtocols.getInstance().addDefaultProtocols(), new OctetString(MPv3.createLocalEngineID()), 0);
+
+//        SecurityModels.getInstance().addSecurityModel(usm);
+
+        snmp = new Snmp(new MessageDispatcherImpl(), transport);
+        snmp.getMessageDispatcher().addMessageProcessingModel(new MPv1());
+        snmp.getMessageDispatcher().addMessageProcessingModel(new MPv2c());
+        snmp.getMessageDispatcher().addMessageProcessingModel(new MPv3(usm));
+
+
+        String username = "username";
+        String authpassphrase = "authpassphrase";
+        String privacypassphrase = "privacypassphrase";
+
+        snmp.getUSM().addUser(new OctetString(username),
+                new UsmUser(new OctetString(username), AuthMD5.ID, new OctetString(authpassphrase), PrivAES128.ID, new OctetString(privacypassphrase)));
+
+        snmp.listen();
+    }
+
+    public void processPdu(CommandResponderEvent crEvent) {
+        PDU pdu = crEvent.getPDU();
+        if (pdu.getType() == PDU.V1TRAP) {
+
+            PDUv1 pduV1 = (PDUv1) pdu;
+            System.out.println("");
+            System.out.println("===== NEW SNMP 1 TRAP RECEIVED ====");
+            System.out.println("agentAddr " + pduV1.getAgentAddress().toString());
+            System.out.println("enterprise " + pduV1.getEnterprise().toString());
+            System.out.println("timeStamp" + String.valueOf(pduV1.getTimestamp()));
+            System.out.println("genericTrap"+ String.valueOf(pduV1.getGenericTrap()));
+            System.out.println("specificTrap " + String.valueOf(pduV1.getSpecificTrap()));
+            System.out.println("snmpVersion " + String.valueOf(PDU.V1TRAP));
+            System.out.println("communityString " + new String(crEvent.getSecurityName()));
+
+        } else if (pdu.getType() == PDU.TRAP) {
+            System.out.println("");
+            System.out.println("===== NEW SNMP 2/3 TRAP RECEIVED ====");
+
+            System.out.println("errorStatus " + String.valueOf(pdu.getErrorStatus()));
+            System.out.println("errorIndex "+ String.valueOf(pdu.getErrorIndex()));
+            System.out.println("requestID " +String.valueOf(pdu.getRequestID()));
+            System.out.println("snmpVersion " + String.valueOf(PDU.TRAP));
+            System.out.println("communityString " + new String(crEvent.getSecurityName()));
+
+        }
+
+        Vector<? extends VariableBinding> varBinds = pdu.getVariableBindings();
+        if (varBinds != null && !varBinds.isEmpty()) {
+            Iterator<? extends VariableBinding> varIter = varBinds.iterator();
+
+            System.out.println("------variable binding list------");
+            while (varIter.hasNext()) {
+                VariableBinding vb = varIter.next();
+
+                String syntaxstr = vb.getVariable().getSyntaxString();
+                int syntax = vb.getVariable().getSyntax();
+                System.out.println( "OID: " + vb.getOid());
+                System.out.println("Value: " +vb.getVariable());
+                System.out.println("syntaxstring: " + syntaxstr );
+                System.out.println("syntax: " + syntax);
+            }
+            System.out.println("------variable binding list------");
+
+        }
+        System.out.println("==== TRAP END ===");
+        System.out.println("");
+    }
+}

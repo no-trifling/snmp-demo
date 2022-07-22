@@ -18,9 +18,9 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 public class SnmpGet {
 
     public static void main(String[] args) {
-//        v1();
+        v1();
 //        v2c();
-        v3();
+//        v3();
     }
 
     /**
@@ -34,7 +34,7 @@ public class SnmpGet {
             transportMapping.listen();
 
             CommunityTarget target = new CommunityTarget();
-            target.setAddress(GenericAddress.parse("udp:39.105.213.2/161"));
+            target.setAddress(GenericAddress.parse("udp:127.0.0.1/162"));
             target.setCommunity(new OctetString("wangxc"));
             target.setVersion(SnmpConstants.version1);
             target.setRetries(1);
